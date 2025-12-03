@@ -1,0 +1,26 @@
+
+# Binaries
+/bin/
+*.exe
+andi-custodian
+
+# Logs & temp
+*.log
+/tmp/
+
+# Go
+/go/
+/bin/
+*.test
+coverage.out
+
+# Editor
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Secrets (NEVER commit these)
+.env
+*.key
+SEPOLIA_RPC_URL
