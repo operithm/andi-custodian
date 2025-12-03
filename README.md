@@ -1,8 +1,9 @@
 # Andi-Custodian: Multi-Chain MPC-Simulated Custody Service
 
-A multi-chain, MPC-simulated digital asset custodian built in Go—designed to reflect the engineering principles of institutional crypto custody platforms like **Anchorage Digital**.
+A Multi-chain, MPC-simulated digital asset custodian built in Go—designed to reflect the engineering principles of institutional crypto custody platforms like **Anchorage Digital**.
 
-Inspired by institutional custody challenges at firms like Anchorage Digital—where security, determinism, and multi-chain support are non-negotiable.”
+Inspired by institutional custody challenges at firms like Anchorage Digital—where security, determinism, and multi-chain support are non-negotiable.
+
 Built to demonstrate deep understanding of:
 - Multi-chain transaction lifecycle (Bitcoin UTXO + Ethereum account model)
 - Secure key handling & BIP-39 recovery
@@ -27,3 +28,8 @@ Built to demonstrate deep understanding of:
 2. Set environment variable:
    ```bash
    export SEPOLIA_RPC_URL="https://eth-sepolia.g.alchemy.com/v2/YOUR_KEY"
+3. Run demo: go run cmd/demo.main.go
+4. Run Docker: 
+   docker run --rm \
+   -e SEPOLIA_RPC_URL="https://eth-sepolia.g.alchemy.com/v2/YOUR_KEY" \
+   andi-custodian

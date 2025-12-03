@@ -19,7 +19,7 @@ ando-custodian/
 │   │   ├── threshold.go            # Threshold key and policy
 │   │   ├── verifier.go             # BTC/ETH Signature verification
 │   │   ├── signer.go               # Signer interface + simulated MPC
-│   │   └── wallet_demo.go          # Simple demo 
+│   │   └── wallet_demo.go          # Wallet demo
 │   ├── chain/
 │   │   ├── bitcoin.go              # UTXO selection, tx building
 │   │   ├── ethereum.go             # Nonce, tx building
