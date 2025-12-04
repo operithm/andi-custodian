@@ -1,130 +1,126 @@
+// service.go
 package custody
 
 import (
+	"andi-custodian/internal/store"
 	"context"
 	"errors"
 	"fmt"
+	"math/big"
 	"sync"
 	"time"
 
+	"andi-custodian/internal/chain"
 	"andi-custodian/internal/wallet"
 )
 
-// Chain represents supported blockchains
-type Chain string
-
-const (
-	EthereumSepolia Chain = "ethereum-sepolia"
-	BitcoinTestnet  Chain = "bitcoin-testnet"
-)
-
-// TransferRequest defines a cross-chain custody transfer
+// TransferRequest defines a custody transfer.
 type TransferRequest struct {
-	ID        string // idempotency key
-	Chain     Chain
-	ToAddress string
-	Amount    string // e.g., "1.5 ETH", "0.05 BTC" (parsed later)
-	Payload   []byte // raw tx hash to sign
+	ID    string
+	Chain chain.Chain
+	From  string
+	To    string
+	Value string // e.g., "1.5 ETH", parsed internally
 }
 
-// TransferResult captures outcome
-type TransferResult struct {
-	TxID      string
-	Status    string // "pending", "confirmed", "failed"
-	BlockHash string
-	Timestamp time.Time
-}
-
-// NonceManager tracks Ethereum nonces safely
-type NonceManager struct {
-	mu     sync.Mutex
-	nonces map[string]uint64 // address -> next nonce
-}
-
-func NewNonceManager() *NonceManager {
-	return &NonceManager{
-		nonces: make(map[string]uint64),
-	}
-}
-
-func (nm *NonceManager) Next(address string) uint64 {
-	nm.mu.Lock()
-	defer nm.mu.Unlock()
-	n := nm.nonces[address]
-	nm.nonces[address] = n + 1
-	return n
-}
-
-// UTXO represents an unspent output (simplified)
-type UTXO struct {
-	TxID  string
-	VOut  uint32
-	Value int64 // satoshis
-}
-
-// UTXOSelector picks UTXOs to cover a target amount
-type UTXOSelector struct{}
-
-func (us *UTXOSelector) Select(utxos []UTXO, target int64) ([]UTXO, int64, error) {
-	// Greedy selection (largest first)
-	total := int64(0)
-	var selected []UTXO
-	for _, u := range utxos {
-		if total >= target {
-			break
-		}
-		selected = append(selected, u)
-		total += u.Value
-	}
-	if total < target {
-		return nil, 0, errors.New("insufficient funds")
-	}
-	return selected, total - target, nil // change = total - target
-}
-
-// TransferService orchestrates multi-chain transfers
-type TransferService struct {
+// Service orchestrates multi-chain custody operations.
+type Service struct {
 	signer       wallet.Signer
-	nonceManager *NonceManager
-	utxoSelector *UTXOSelector
-	idempotency  sync.Map // requestID -> *TransferResult
+	store        store.Store   // ← add store dependency
+	nonceManager *NonceManager // optional: or delegate to store
+	utxoSelector UTXOSelector
+	idempotency  sync.Map
 }
 
-func NewTransferService(signer wallet.Signer) *TransferService {
-	return &TransferService{
+// NewService creates a new custody service.
+func NewService(signer wallet.Signer, store store.Store) *Service {
+	return &Service{
 		signer:       signer,
+		store:        store,
 		nonceManager: NewNonceManager(),
-		utxoSelector: &UTXOSelector{},
+		utxoSelector: &GreedySelector{},
 	}
 }
 
-// Transfer initiates a custody transfer with idempotency
-func (s *TransferService) Transfer(ctx context.Context, req *TransferRequest) (*TransferResult, error) {
+// Transfer initiates a custody transfer with idempotency.
+func (s *Service) Transfer(ctx context.Context, req *TransferRequest) (*store.TransferResult, error) {
 	// 1. Idempotency check
 	if existing, ok := s.idempotency.Load(req.ID); ok {
-		return existing.(*TransferResult), nil
+		return existing.(*store.TransferResult), nil
 	}
 
-	// 2. Sign the payload (simulated MPC)
+	// 2. Parse value (simplified: assume satoshis/wei based on chain)
+	// In production, use units package (e.g., 1.5 ETH → 1500000000000000000)
+	var valueInt int64 = 1000000000000000000 // 1 ETH or 0.01 BTC for demo
+
+	// 3. Build transaction
+	builder, err := chain.NewBuilder(req.Chain)
+	if err != nil {
+		return nil, err
+	}
+
+	var opts chain.BuildOptions
+	switch req.Chain {
+	case chain.EthereumSepolia:
+		opts.Nonce = s.nonceManager.GetNext(req.From)
+	case chain.BitcoinTestnet:
+		// In production, fetch UTXOs from indexer or store
+		opts.UTXOs = []chain.UTXO{
+			{TxID: "mock", VOut: 0, Value: 2000000000}, // 20 BTC
+		}
+	default:
+		return nil, errors.New("unsupported chain")
+	}
+
+	txReq := &chain.TxRequest{
+		Chain: req.Chain,
+		From:  req.From,
+		To:    req.To,
+		Value: big.NewInt(valueInt),
+		ID:    req.ID,
+	}
+
+	tx, err := builder.BuildTx(txReq, opts)
+	if err != nil {
+		return nil, fmt.Errorf("build tx failed: %w", err)
+	}
+
+	// 4. Sign transaction
+	// Note: In real system, payload = tx hash (sighash for BTC, keccak256 for ETH)
 	sig, err := s.signer.Sign(ctx, wallet.SignRequest{
 		Chain:   wallet.Chain(req.Chain),
-		Payload: req.Payload,
+		Payload: tx.RawTx, // simplified; real system uses tx hash
 	})
 	if err != nil {
 		return nil, fmt.Errorf("signing failed: %w", err)
 	}
 
-	// 3. Broadcast would happen here (simulated)
+	// 5. Broadcast would happen here (simulated)
 	txID := fmt.Sprintf("mock-tx-%x", sig[:8])
 
-	result := &TransferResult{
+	result := &store.TransferResult{
 		TxID:      txID,
 		Status:    "pending",
 		Timestamp: time.Now(),
 	}
 
-	// 4. Store result for idempotency
+	// 6. Store for idempotency
 	s.idempotency.Store(req.ID, result)
 
+	// 7. Start monitoring finality (in background)
+	go s.monitorFinality(req.Chain, txID, req.ID)
+
 	return result, nil
+}
+
+// monitorFinality simulates finality confirmation.
+func (s *Service) monitorFinality(chain chain.Chain, txID, id string) {
+	// In production: poll RPC, wait for N confirmations
+	time.Sleep(5 * time.Second)
+
+	// Update status (in real system, use a store)
+	if existing, ok := s.idempotency.Load(id); ok {
+		res := existing.(*store.TransferResult)
+		res.Status = "confirmed"
+	}
 }

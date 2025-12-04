@@ -1,0 +1,20 @@
+# k8s/custody/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: custody-server
+spec:
+  replicas: 3
+  template:
+    spec:
+      containers:
+        - name: custody-server
+          image: operithm/andi-custodian:latest
+          ports:
+            - containerPort: 50051
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: custody-secrets
+                  key: database-url

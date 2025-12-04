@@ -1,0 +1,11 @@
+# k8s/custody/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: custody-service
+spec:
+  ports:
+    - port: 50051
+      targetPort: 50051
+  selector:
+    app: custody-server

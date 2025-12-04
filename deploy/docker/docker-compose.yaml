@@ -1,0 +1,34 @@
+# docker-compose.yml
+version: '3.8'
+
+services:
+  # Your custody service
+  custody-server:
+    build: .
+    ports:
+      - "50051:50051"
+    environment:
+      - DATABASE_URL=postgresql://custodian:secure_password_123@postgres:5432/andi_custodian?sslmode=disable
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # PostgreSQL (for local dev only)
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: custodian
+      POSTGRES_PASSWORD: secure_password_123
+      POSTGRES_DB: andi_custodian
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U custodian"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:

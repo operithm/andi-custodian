@@ -8,8 +8,8 @@ rm go.mod go.sum
 go mod init andi-custodian
 
 # 3. Add correct dependencies
-go get github.com/btcsuite/btcd@v0.25.0
-go get github.com/ethereum/go-ethereum@v1.14.6
+go get github.com/btcsuite/btcd@v0.23.3
+go get github.com/ethereum/go-ethereum@v1.13.15
 go get github.com/tyler-smith/go-bip39@v1.0.0
 
 # 4. Verify

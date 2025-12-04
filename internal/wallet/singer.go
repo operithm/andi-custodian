@@ -38,6 +38,10 @@ type SimulatedMPCSigner struct {
 	seed WalletSeed
 }
 
+var (
+	ErrSigningFailed = errors.New("signing failed")
+)
+
 func NewSimulatedMPCSigner(seed []byte) *SimulatedMPCSigner {
 	return &SimulatedMPCSigner{
 		seed: WalletSeed{Seed: seed},

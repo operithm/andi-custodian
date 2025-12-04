@@ -1,0 +1,23 @@
+// api/custody/v1/custody.proto
+syntax = "proto3";
+
+package custody.v1;
+
+option go_package = "andi-custodian/api/custody/v1;custodyv1";
+
+service CustodyService {
+  rpc Transfer(TransferRequest) returns (TransferResponse);
+}
+
+message TransferRequest {
+  string id = 1;
+  string chain = 2;
+  string from = 3;
+  string to = 4;
+  string value = 5;
+}
+
+message TransferResponse {
+  string tx_id = 1;
+  string status = 2;
+}

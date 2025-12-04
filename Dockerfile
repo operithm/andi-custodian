@@ -1,36 +1,26 @@
 # Build stage
 FROM golang:1.24-alpine AS builder
 
-# Install ca-certificates (needed for TLS/HTTPS)
-RUN apk add --no-cache ca-certificates
+# Install CA certs
+RUN apk add --no-cache ca-certificates git
 
-# Set working directory
 WORKDIR /app
 
-# Copy Go modules
+# Copy go mod files
 COPY go.mod go.sum ./
 
-# Download dependencies
+# Download modules
 RUN go mod download
 
-# Copy source code
+# Copy ALL source (including generated .pb.go files!)
 COPY . .
 
-# Build binary (static, stripped, minimal)
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o andi-custodian ./cmd/demo
+# Build binary
+RUN CGO_ENABLED=0 GOOS=linux go build -a -trimpath -o custody-server ./cmd/server
 
 # Final stage
 FROM scratch
-
-# Import certificates
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+COPY --from=builder /app/custody-server /custody-server
 
-# Create non-root user (security best practice)
-# (scratch has no user management, so we rely on runtime user)
-# In production, set USER 65532 (nonroot) if using distroless
-
-# Copy binary
-COPY --from=builder /app/andi-custodian /andi-custustodian
-
-# Set entrypoint
-ENTRYPOINT ["/andi-custodian"]
+ENTRYPOINT ["/custody-server"]
