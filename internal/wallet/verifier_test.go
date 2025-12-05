@@ -5,6 +5,7 @@ import (
 	"context"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/stretchr/testify/assert"
 	"github.com/tyler-smith/go-bip39"
 	"testing"
 )
@@ -57,4 +58,19 @@ func TestVerifier_VerifyBitcoin(t *testing.T) {
 	// from TestSimulatedMPCSigner_Sign_Bitcoin
 	// Full test would mirror that flow
 	t.Skip("Implement using signer-generated values")
+}
+func TestVerifier_VerifyNFTTransfer_Ordinals(t *testing.T) {
+	mnemonic := "slab lonely fish push bomb festival open oval empower federal slot hotel"
+	seed := bip39.NewSeed(mnemonic, "")
+	signer := NewSimulatedMPCSigner(seed)
+
+	req := NFTTransferRequest{
+		Chain:    BitcoinTestnet,
+		Standard: ORDINALS,
+	}
+
+	sig, err := signer.SignNFTTransfer(context.Background(), req)
+	assert.NoError(t, err)
+	assert.GreaterOrEqual(t, len(sig), 70) // DER signature length
+	assert.LessOrEqual(t, len(sig), 72)
 }

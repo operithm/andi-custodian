@@ -37,6 +37,11 @@ func (v *Verifier) VerifyBitcoin(hash, sig []byte, pubKey *btcec.PublicKey) bool
 	return ecdsa.Verify(goPub, hash, r, s)
 }
 
+func (v *Verifier) VerifyNFTTransfer(hash, sig []byte, expectedOwner string) bool {
+	// Same as ETH verification
+	return v.VerifyEthereum(hash, sig, expectedOwner)
+}
+
 // parseSignatureDER parses a DER-encoded ECDSA signature into r and s.
 // It assumes strict DER (BIP-66).
 func parseSignatureDER(sig []byte) (r, s *big.Int, err error) {
