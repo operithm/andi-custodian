@@ -62,7 +62,7 @@ func (s *SimulatedMPCSigner) SignNFTTransfer(ctx context.Context, req NFTTransfe
 		return nil, fmt.Errorf("unsupported chain for NFT: %s", req.Chain)
 	}
 
-	// ✅ DELEGATE TO EXISTING Signer.Sign()
+	// DELEGATE TO EXISTING Signer.Sign()
 	return s.Sign(ctx, SignRequest{
 		Chain:   chain,
 		Payload: payload,
