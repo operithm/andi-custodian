@@ -3,6 +3,7 @@ package custody
 
 import (
 	"andi-custodian/internal/store"
+	"andi-custodian/pkg/tokens"
 	"context"
 	"errors"
 	"fmt"
@@ -17,10 +18,11 @@ import (
 // TransferRequest defines a custody transfer.
 type TransferRequest struct {
 	ID    string
-	Chain chain.Chain
+	Chain string
 	From  string
 	To    string
-	Value string // e.g., "1.5 ETH", parsed internally
+	Asset string // "ETH", "USTC", "EUTC", "BAYC"
+	Value string // "1.0", "1.000000", "12345"
 }
 
 // Service orchestrates multi-chain custody operations.
@@ -51,16 +53,23 @@ func (s *Service) Transfer(ctx context.Context, req *TransferRequest) (*store.Tr
 
 	// 2. Parse value (simplified: assume satoshis/wei based on chain)
 	// In production, use units package (e.g., 1.5 ETH → 1500000000000000000)
-	var valueInt int64 = 1000000000000000000 // 1 ETH or 0.01 BTC for demo
+	var valueInt int64 = 1_000_000_000_000_000_000 // 1 ETH or 0.01 BTC for demo
 
 	// 3. Build transaction
-	builder, err := chain.NewBuilder(req.Chain)
+	//convert string to chain.Chain
+	chainType := chain.Chain(req.Chain)
+	builder, err := chain.NewBuilder(chainType)
 	if err != nil {
 		return nil, err
 	}
 
+	_, ok := tokens.GetTokenBySymbol(req.Chain, req.Asset)
+	if !ok {
+		return nil, fmt.Errorf("unsupported asset: %s on %s", req.Asset, req.Chain)
+	}
+
 	var opts chain.BuildOptions
-	switch req.Chain {
+	switch chainType {
 	case chain.EthereumSepolia:
 		opts.Nonce = s.nonceManager.GetNext(req.From)
 	case chain.BitcoinTestnet:
@@ -73,7 +82,7 @@ func (s *Service) Transfer(ctx context.Context, req *TransferRequest) (*store.Tr
 	}
 
 	txReq := &chain.TxRequest{
-		Chain: req.Chain,
+		Chain: chainType,
 		From:  req.From,
 		To:    req.To,
 		Value: big.NewInt(valueInt),
@@ -108,7 +117,7 @@ func (s *Service) Transfer(ctx context.Context, req *TransferRequest) (*store.Tr
 	s.idempotency.Store(req.ID, result)
 
 	// 7. Start monitoring finality (in background)
-	go s.monitorFinality(req.Chain, txID, req.ID)
+	go s.monitorFinality(chainType, txID, req.ID)
 
 	return result, nil
 }

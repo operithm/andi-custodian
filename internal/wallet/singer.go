@@ -8,6 +8,8 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/rlp"
 	"math/big"
 
 	"github.com/btcsuite/btcd/btcec/v2"
@@ -42,6 +44,17 @@ var (
 	ErrSigningFailed = errors.New("signing failed")
 )
 
+var erc20ABIJson = []byte(`[
+	{
+		"inputs": [
+			{"name": "to", "type": "address"},
+			{"name": "value", "type": "uint256"}
+		],
+		"name": "transfer",
+		"type": "function"
+	}
+]`)
+
 func NewSimulatedMPCSigner(seed []byte) *SimulatedMPCSigner {
 	return &SimulatedMPCSigner{
 		seed: WalletSeed{Seed: seed},
@@ -65,8 +78,7 @@ func (s *SimulatedMPCSigner) Sign(ctx context.Context, req SignRequest) ([]byte,
 	var sig []byte
 
 	switch req.Chain {
-	case EthereumSepolia:
-		goPriv := privKey.ToECDSA()
+	case EthereumSepolia, AvalancheFuji:
 		sig, err := crypto.Sign(req.Payload, goPriv)
 		if err != nil {
 			return nil, fmt.Errorf("ethereum sign failed: %w", err)
@@ -88,6 +100,9 @@ func (s *SimulatedMPCSigner) Sign(ctx context.Context, req SignRequest) ([]byte,
 
 		der := derEncodeSignature(r, s)
 		return der, nil
+
+	case SolanaDevnet:
+		return s.SignSolana(ctx, req.Payload)
 
 	default:
 		return nil, fmt.Errorf("unsupported chain: %s", req.Chain)
@@ -129,6 +144,15 @@ func derEncodeSignature(r, s *big.Int) []byte {
 	buf.Write(sEnc)
 
 	return buf.Bytes()
+}
+
+func computeEthereumTxHash(rawTx []byte, chainID *big.Int) ([]byte, error) {
+	tx := new(types.Transaction)
+	if err := rlp.DecodeBytes(rawTx, tx); err != nil {
+		return nil, err
+	}
+	signer := types.NewEIP155Signer(chainID)
+	return signer.Hash(tx).Bytes(), nil
 }
 
 // verifyEthereumSignature recovers the public key and checks address match.

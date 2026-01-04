@@ -14,8 +14,10 @@ func NewBuilder(chainType Chain) (Builder, error) {
 	switch chainType {
 	case BitcoinTestnet:
 		return &BitcoinBuilder{}, nil
-	case EthereumSepolia:
+	case EthereumSepolia, AvalancheFuji:
 		return &EthereumBuilder{}, nil
+	case SolanaDevnet:
+		return &SolanaBuilder{}, nil
 	default:
 		return nil, errors.New("unsupported chain: " + string(chainType))
 	}

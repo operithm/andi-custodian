@@ -16,6 +16,8 @@ type Chain string
 const (
 	BitcoinTestnet  Chain = "bitcoin-testnet"
 	EthereumSepolia Chain = "ethereum-sepolia"
+	SolanaDevnet    Chain = "solana-devnet"
+	AvalancheFuji   Chain = "avalanche-fuji"
 )
 
 // DeriveAddress derives a wallet address for the given chain using standard BIP paths.

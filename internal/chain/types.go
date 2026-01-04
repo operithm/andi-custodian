@@ -12,6 +12,8 @@ type Chain string
 const (
 	BitcoinTestnet  Chain = "bitcoin-testnet"
 	EthereumSepolia Chain = "ethereum-sepolia"
+	SolanaDevnet    Chain = "solana-devnet"
+	AvalancheFuji   Chain = "avalanche-fuji"
 )
 
 // TxRequest is a cross-chain transaction request.
@@ -27,6 +29,16 @@ type TxRequest struct {
 type TxResult struct {
 	RawTx        []byte // unsigned serialized transaction
 	EstimatedFee int64  // in native units (satoshis or wei)
+}
+
+// TokenTransferRequest is a cross-chain token transaction request
+type TokenTransferRequest struct {
+	Chain     Chain
+	From      string
+	To        string
+	Token     string // e.g., "USDC"
+	AmountStr string // e.g., "1.000000"
+	ID        string // for idempotency
 }
 
 // BuildOptions provides chain-specific context (e.g., UTXOs for BTC, nonce for ETH)

@@ -4,6 +4,7 @@ package custody
 import (
 	"andi-custodian/internal/store"
 	"context"
+	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
 
@@ -114,6 +115,24 @@ func TestService_Transfer_Monitoring(t *testing.T) {
 	} else {
 		t.Error("Result not found in idempotency store")
 	}
+}
+
+func TestService_Transfer_Avalanche(t *testing.T) {
+	signer := &MockSigner{}
+	store := store.NewInMemoryStore()
+	service := NewService(signer, store)
+
+	req := &TransferRequest{
+		ID:    "avax-1",
+		Chain: "avalanche-fuji",
+		From:  "0x8E76C1897e55d208b2b5f45cDb43FD7d403a9a31",
+		To:    "0x742d35Cc6634C0532925a3b844Bc9dbd8b5E8a18",
+		Value: "1",
+	}
+
+	res, err := service.Transfer(context.Background(), req)
+	assert.NoError(t, err)
+	assert.Equal(t, "pending", res.Status)
 }
 
 func newTestService(t *testing.T, signer wallet.Signer) *Service {

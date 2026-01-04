@@ -1,8 +1,7 @@
 # Andi-Custodian: Multi-Chain MPC-Simulated Custody Service
 
-A Multi-chain, MPC-simulated digital asset custodian built in Go—designed to reflect the engineering principles of institutional crypto custody platforms like **Anchorage Digital**.
-
-Inspired by institutional custody challenges at firms like Anchorage Digital—where security, determinism, and multi-chain support are non-negotiable.
+A Multi-chain, MPC-simulated digital asset custodian built in Go—designed to reflect the engineering principles of leading institutional crypto custody platforms, 
+addressing the custodian challenges that security, determinism, and multi-chain support are non-negotiable.
 
 Built to demonstrate deep understanding of:
 - Multi-chain transaction lifecycle (Bitcoin UTXO + Ethereum account model)
